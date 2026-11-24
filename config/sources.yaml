@@ -1,0 +1,127 @@
+# Pre-configured Security Advisory Sources Registry
+# Sources marked enabled: true are verified active public feeds/APIs.
+# Sources marked enabled: false are provided as configured examples for users to verify or supply credentials.
+
+sources:
+  # Primary authoritative sources
+  - name: "CISA KEV"
+    type: "api"
+    url: "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    enabled: true
+    notes: "Official CISA Known Exploited Vulnerabilities Catalog (JSON). No API key needed."
+
+  - name: "NVD API 2.0"
+    type: "api"
+    url: "https://services.nvd.nist.gov/rest/json/cves/2.0"
+    enabled: true
+    notes: "NIST National Vulnerability Database API 2.0. Optional API key supported in .env."
+
+  - name: "GitHub Global Advisories"
+    type: "api"
+    url: "https://api.github.com/advisories"
+    enabled: true
+    notes: "GitHub Security Advisory Database REST API. Free public access."
+
+  # Government & National CERT Feeds (Verified Public RSS/Atom)
+  - name: "CISA Cybersecurity Alerts"
+    type: "rss"
+    url: "https://www.cisa.gov/cybersecurity-advisories/all.xml"
+    enabled: true
+    notes: "CISA official cybersecurity advisories and alerts RSS feed."
+
+  - name: "US-CERT Current Activity"
+    type: "rss"
+    url: "https://www.cisa.gov/feeds/current-activity.xml"
+    enabled: true
+    notes: "CISA / US-CERT high-priority security activity and timely bulletins."
+
+  - name: "Canadian Centre for Cyber Security"
+    type: "rss"
+    url: "https://www.cyber.gc.ca/api/rss/en/alerts-advisories.xml"
+    enabled: true
+    notes: "CCCS official cyber alerts and security advisories feed."
+
+  - name: "CERT-EU Security Advisories"
+    type: "rss"
+    url: "https://cert.europa.eu/publications/security-advisories/rss"
+    enabled: true
+    notes: "European Union Computer Emergency Response Team security advisories."
+
+  - name: "JPCERT/CC Technical Advisories"
+    type: "rss"
+    url: "https://www.jpcert.or.jp/english/at/rss.xml"
+    enabled: true
+    notes: "Japan Computer Emergency Response Team Coordination Center alerts."
+
+  - name: "CERT-In Advisories"
+    type: "html"
+    url: "https://www.cert-in.org.in/"
+    enabled: false
+    notes: "Indian Computer Emergency Response Team. Web access verified; disabled by default pending user rate/policy check."
+
+  # Vendor Security Advisory Feeds (RSS/Atom)
+  - name: "Microsoft Security Response Center (MSRC)"
+    type: "rss"
+    url: "https://api.msrc.microsoft.com/update-guide/rss"
+    enabled: true
+    notes: "Official Microsoft MSRC security updates and bulletin RSS."
+
+  - name: "Google Project Zero"
+    type: "rss"
+    url: "https://googleprojectzero.blogspot.com/feeds/posts/default"
+    enabled: true
+    notes: "0-day and advanced vulnerability research reports by Google Project Zero."
+
+  - name: "Red Hat Security Advisories"
+    type: "rss"
+    url: "https://access.redhat.com/security/data/metrics/rhsa.rss"
+    enabled: true
+    notes: "Red Hat enterprise Linux and open source security notices."
+
+  - name: "Debian Security Advisories"
+    type: "rss"
+    url: "https://www.debian.org/security/dsa"
+    enabled: false
+    notes: "Debian DSA public announcement feed."
+
+  - name: "Ubuntu Security Notices"
+    type: "rss"
+    url: "https://ubuntu.com/security/notices/rss.xml"
+    enabled: true
+    notes: "Canonical Ubuntu security notices and patch advisories."
+
+  - name: "Cisco Security Advisories"
+    type: "rss"
+    url: "https://tools.cisco.com/security/center/psirprss20/CiscoSecurityAdvisory.xml"
+    enabled: true
+    notes: "Cisco Product Security Incident Response Team (PSIRT) public advisories."
+
+  - name: "VMware Security Advisories"
+    type: "rss"
+    url: "https://www.vmware.com/security/advisories.xml"
+    enabled: false
+    notes: "Broadcom/VMware security bulletin feed. Endpoint unverified/relocated."
+
+  - name: "Apache Software Foundation Security"
+    type: "rss"
+    url: "https://www.apache.org/security/asf-security-announcements.xml"
+    enabled: false
+    notes: "ASF announcement feed placeholder."
+
+  - name: "Oracle Critical Patch Updates"
+    type: "rss"
+    url: "https://www.oracle.com/security-alerts/rss"
+    enabled: false
+    notes: "Oracle CPU security advisories. Requires verification of active feed URL."
+
+  - name: "Apple Security Updates"
+    type: "rss"
+    url: "https://support.apple.com/en-us/HT201222"
+    enabled: false
+    notes: "Apple security releases document. HTML listing."
+
+  - name: "AWS Security Bulletins"
+    type: "rss"
+    url: "https://aws.amazon.com/security/security-bulletins/rss"
+    enabled: true
+    notes: "Amazon Web Services security bulletins and updates."

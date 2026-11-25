@@ -105,7 +105,7 @@ def execute_collection_cycle(
                     status="RUNNING"
                 )
                 session.add(source_run)
-                session.flush()
+                session.commit()
 
                 source.last_attempt_at = datetime.datetime.utcnow()
 
@@ -146,7 +146,7 @@ def execute_collection_cycle(
                     source_run.finished_at = datetime.datetime.utcnow()
                     errors_count += 1
 
-                session.flush()
+                session.commit()
 
             # Enqueue outbound notification emails for newly generated events
             if all_created_events and not is_baseline_mode(session):

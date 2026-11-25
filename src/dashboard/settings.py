@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import json
 import datetime
@@ -157,6 +158,33 @@ def render_settings(session: Session):
                         st.success(f"Sample alert email sent to {test_recipient}!")
                     except Exception as exc:
                         st.error(f"Failed to send sample alert:\n\n{exc}")
+
+    st.markdown("---")
+
+    # Section 3.5: Company Logo Branding
+    st.subheader("🏢 Company Logo Branding")
+    assets_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "assets")
+    os.makedirs(assets_dir, exist_ok=True)
+    uploaded_logo = st.file_uploader("Upload Company Logo (PNG, JPG, WEBP)", type=["png", "jpg", "jpeg", "webp"])
+    if uploaded_logo is not None:
+        ext = uploaded_logo.name.rsplit(".", 1)[-1].lower()
+        for old_ext in ("png", "jpg", "jpeg", "webp"):
+            old_path = os.path.join(assets_dir, f"logo.{old_ext}")
+            if os.path.exists(old_path):
+                os.remove(old_path)
+        save_path = os.path.join(assets_dir, f"logo.{ext}")
+        with open(save_path, "wb") as f:
+            f.write(uploaded_logo.getbuffer())
+        st.success("Company logo saved! Refreshing dashboard...")
+        st.rerun()
+
+    existing_logos = [os.path.join(assets_dir, f"logo.{e}") for e in ("png", "jpg", "jpeg", "webp") if os.path.exists(os.path.join(assets_dir, f"logo.{e}"))]
+    if existing_logos:
+        if st.button("🗑️ Remove Company Logo"):
+            for lp in existing_logos:
+                os.remove(lp)
+            st.success("Company logo removed.")
+            st.rerun()
 
     st.markdown("---")
 

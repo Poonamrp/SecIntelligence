@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 from src.database import init_db, get_db_session
 from src.utils.logging_config import setup_logging
@@ -34,6 +35,13 @@ def start_background_service():
 start_background_service()
 
 # Sidebar Navigation
+assets_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+for ext in ("png", "jpg", "jpeg", "webp"):
+    logo_candidate = os.path.join(assets_dir, f"logo.{ext}")
+    if os.path.exists(logo_candidate):
+        st.sidebar.image(logo_candidate, use_container_width=True)
+        break
+
 st.sidebar.markdown("## 🛡️ SecIntelligence")
 st.sidebar.caption("Continuous Vulnerability Awareness")
 

@@ -1,7 +1,7 @@
 import os
 from contextlib import contextmanager
 from typing import Generator
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from src.config import get_config
 from src.utils.logging_config import get_logger
@@ -19,11 +19,20 @@ def get_engine():
         db_dir = os.path.dirname(sqlite_path)
         if db_dir:
             os.makedirs(db_dir, exist_ok=True)
-    return create_engine(
+    eng = create_engine(
         db_url,
-        connect_args={"check_same_thread": False} if db_url.startswith("sqlite") else {},
+        connect_args={"check_same_thread": False, "timeout": 30} if db_url.startswith("sqlite") else {},
         pool_pre_ping=True
     )
+    if db_url.startswith("sqlite"):
+        @event.listens_for(eng, "connect")
+        def _set_sqlite_pragma(dbapi_connection, connection_record):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA journal_mode=WAL;")
+            cursor.execute("PRAGMA synchronous=NORMAL;")
+            cursor.execute("PRAGMA busy_timeout=30000;")
+            cursor.close()
+    return eng
 
 engine = get_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

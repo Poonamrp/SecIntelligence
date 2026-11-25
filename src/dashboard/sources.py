@@ -49,7 +49,7 @@ def render_sources(session: Session):
                 toggle_label = "Disable" if src.enabled else "Enable"
                 if b1.button(toggle_label, key=f"tog_{src.id}"):
                     src.enabled = not src.enabled
-                    session.flush()
+                    session.commit()
                     st.rerun()
 
                 # Test Connection
@@ -101,7 +101,7 @@ def render_sources(session: Session):
                                 config_json=new_config
                             )
                             session.add(src_new)
-                            session.flush()
+                            session.commit()
                             st.success(f"Source '{new_name}' added successfully!")
                             st.rerun()
                     except Exception as exc:

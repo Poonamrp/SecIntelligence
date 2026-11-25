@@ -36,6 +36,7 @@ def render_settings(session: Session):
     new_baseline = st.toggle("Enable Baseline Mode (Suppress Alert Emails)", value=current_baseline)
     if new_baseline != current_baseline:
         set_baseline_mode(session, new_baseline)
+        session.commit()
         st.toast(f"Baseline mode updated to: {new_baseline}", icon="✅")
         st.rerun()
 
@@ -55,6 +56,7 @@ def render_settings(session: Session):
         )
         if st.form_submit_button("💾 Save Schedule Interval"):
             _save_setting(session, "check_interval_minutes", int(new_interval))
+            session.commit()
             reschedule_collection_job(int(new_interval))
             st.success(f"Scheduler updated! Automatic collection will now run every {int(new_interval)} minutes.")
             st.rerun()
@@ -86,6 +88,7 @@ def render_settings(session: Session):
         if st.form_submit_button("💾 Save Alert Preferences"):
             _save_setting(session, "alert_to", new_to.strip())
             _save_setting(session, "email_notification_policy", new_policy)
+            session.commit()
             st.success("Alert preferences saved!")
             st.rerun()
 

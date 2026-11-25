@@ -33,6 +33,7 @@ def render_alerts(session: Session):
                 it.next_attempt_at = datetime.datetime.utcnow()
             session.flush()
             sent = process_outbox(session)
+            session.commit()
             st.toast(f"Retried outbox: {sent} emails sent!", icon="📨")
             st.rerun()
 

@@ -20,6 +20,7 @@ def render_overview(session: Session):
         with col_b2:
             if st.button("🔔 Enable Notifications", use_container_width=True, type="primary"):
                 set_baseline_mode(session, False)
+                session.commit()
                 st.success("Notifications enabled! You will now receive alert emails for new/updated vulnerabilities.")
                 st.rerun()
 

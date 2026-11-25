@@ -1,11 +1,12 @@
 import streamlit as st
 import json
+import datetime
 from sqlalchemy.orm import Session
 from src.models import Advisory, Source, AdvisoryEvent
 
 def render_vulnerabilities(session: Session):
     st.title("🔍 Vulnerabilities Explorer")
-    st.caption("Search, filter, and inspect normalized security advisories with verifiable source evidence.")
+    st.caption("Search, filter, sort by date, and inspect normalized security advisories with verifiable source evidence.")
 
     # Search & Filter Controls
     sources = session.query(Source).order_by(Source.name.asc()).all()
@@ -20,6 +21,41 @@ def render_vulnerabilities(session: Session):
         sev_filter = st.selectbox("Severity", ["All", "Critical", "High", "Medium", "Low", "Unknown"])
     with col_kev:
         kev_filter = st.selectbox("CISA KEV", ["All", "KEV Only", "Non-KEV"])
+
+    # Date Filter & Sort Controls
+    col_date_preset, col_start, col_end, col_sort = st.columns([1.5, 1, 1, 2])
+    with col_date_preset:
+        date_preset = st.selectbox("Date Range", ["All Time", "Last 24 Hours", "Last 7 Days", "Last 30 Days", "Custom Range"])
+    
+    today = datetime.date.today()
+    start_date = None
+    end_date = None
+
+    if date_preset == "Last 24 Hours":
+        start_date = today - datetime.timedelta(days=1)
+        end_date = today
+    elif date_preset == "Last 7 Days":
+        start_date = today - datetime.timedelta(days=7)
+        end_date = today
+    elif date_preset == "Last 30 Days":
+        start_date = today - datetime.timedelta(days=30)
+        end_date = today
+    elif date_preset == "Custom Range":
+        with col_start:
+            start_date = st.date_input("From Date", value=today - datetime.timedelta(days=7))
+        with col_end:
+            end_date = st.date_input("To Date", value=today)
+
+    with col_sort:
+        sort_option = st.selectbox(
+            "Sort By",
+            [
+                "Published Date (Newest First)",
+                "Published Date (Oldest First)",
+                "CVSS Score (Highest First)",
+                "First Seen (Newest First)"
+            ]
+        )
 
     # Query Builder
     query = session.query(Advisory)
@@ -47,11 +83,28 @@ def render_vulnerabilities(session: Session):
     elif kev_filter == "Non-KEV":
         query = query.filter(Advisory.is_kev == False)
 
+    if start_date is not None:
+        start_dt = datetime.datetime.combine(start_date, datetime.time.min)
+        query = query.filter(Advisory.published_at >= start_dt)
+    if end_date is not None:
+        end_dt = datetime.datetime.combine(end_date, datetime.time.max)
+        query = query.filter(Advisory.published_at <= end_dt)
+
+    # Apply sorting
+    if sort_option == "Published Date (Newest First)":
+        query = query.order_by(Advisory.published_at.desc().nullslast())
+    elif sort_option == "Published Date (Oldest First)":
+        query = query.order_by(Advisory.published_at.asc().nullslast())
+    elif sort_option == "CVSS Score (Highest First)":
+        query = query.order_by(Advisory.cvss_score.desc().nullslast(), Advisory.published_at.desc().nullslast())
+    elif sort_option == "First Seen (Newest First)":
+        query = query.order_by(Advisory.first_seen_at.desc())
+
     # Count & Pagination
     total_matches = query.count()
     st.write(f"Showing **{min(50, total_matches)}** of **{total_matches}** matched advisories")
 
-    advisories = query.order_by(Advisory.published_at.desc().nullslast()).limit(50).all()
+    advisories = query.limit(50).all()
 
     if not advisories:
         st.info("No advisories match the selected filters.")

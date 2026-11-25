@@ -189,6 +189,21 @@ def execute_collection_cycle(
 
     return run_id
 
+def get_configured_interval_minutes() -> int:
+    """Returns configured check interval in minutes (DB override first, then .env)."""
+    cfg = get_config()
+    interval = cfg.check_interval_minutes
+    try:
+        with get_db_session() as session:
+            s = session.query(Setting).filter_by(key="check_interval_minutes").first()
+            if s:
+                val = int(json.loads(s.value_json))
+                if val >= 5:
+                    interval = val
+    except Exception:
+        pass
+    return max(5, interval)
+
 def start_scheduler() -> BackgroundScheduler:
     """Initializes and starts the persistent APScheduler instance."""
     global _scheduler
@@ -197,7 +212,7 @@ def start_scheduler() -> BackgroundScheduler:
 
     init_db()
     cfg = get_config()
-    interval_mins = max(5, cfg.check_interval_minutes)
+    interval_mins = get_configured_interval_minutes()
 
     _scheduler = BackgroundScheduler(
         timezone=cfg.app_timezone,
@@ -208,7 +223,7 @@ def start_scheduler() -> BackgroundScheduler:
         }
     )
 
-    # Schedule recurring hourly job
+    # Schedule recurring job
     _scheduler.add_job(
         func=execute_collection_cycle,
         trigger=IntervalTrigger(minutes=interval_mins),
@@ -221,6 +236,17 @@ def start_scheduler() -> BackgroundScheduler:
     _scheduler.start()
     logger.info(f"Background scheduler started. Next run scheduled in {interval_mins} minutes.")
     return _scheduler
+
+def reschedule_collection_job(interval_minutes: int) -> None:
+    """Updates the running APScheduler job interval immediately."""
+    global _scheduler
+    mins = max(5, int(interval_minutes))
+    if _scheduler is not None and _scheduler.running:
+        _scheduler.reschedule_job(
+            "hourly_threat_collection",
+            trigger=IntervalTrigger(minutes=mins)
+        )
+        logger.info(f"Rescheduled background collection interval to every {mins} minutes.")
 
 def trigger_run_now() -> Optional[int]:
     """Triggers an immediate collection run asynchronously or synchronously."""

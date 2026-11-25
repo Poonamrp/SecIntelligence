@@ -1,12 +1,42 @@
+import json
 import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session
-from src.models import EmailOutbox, AdvisoryEvent, Advisory
+from src.models import EmailOutbox, AdvisoryEvent, Advisory, Setting
 from src.services.email_service import EmailService
 from src.config import get_config
 from src.utils.logging_config import get_logger
 
 logger = get_logger("outbox")
+
+def get_effective_email_settings(session: Session) -> Tuple[str, str]:
+    """
+    Returns (alert_to, policy) checking database settings overrides first,
+    then falling back to .env config.
+    """
+    cfg = get_config()
+    alert_to = cfg.alert_to or cfg.smtp_username or ""
+    policy = cfg.email_notification_policy
+
+    db_to = session.query(Setting).filter_by(key="alert_to").first()
+    if db_to:
+        try:
+            val = json.loads(db_to.value_json)
+            if isinstance(val, str) and val.strip():
+                alert_to = val.strip()
+        except Exception:
+            pass
+
+    db_pol = session.query(Setting).filter_by(key="email_notification_policy").first()
+    if db_pol:
+        try:
+            val = json.loads(db_pol.value_json)
+            if isinstance(val, str) and val.strip():
+                policy = val.strip()
+        except Exception:
+            pass
+
+    return alert_to, policy
 
 def should_notify_event(event: AdvisoryEvent, advisory: Advisory, policy: str) -> bool:
     """
@@ -39,15 +69,15 @@ def enqueue_advisory_alerts(session: Session, events: List[AdvisoryEvent]) -> in
     """
     Enqueues outbound notification emails for newly generated events.
     Applies deduplication key constraint (event_id + recipient) to prevent duplicates.
+    Supports comma-separated recipients.
     """
-    cfg = get_config()
-    recipient = cfg.alert_to or cfg.smtp_username
-    if not recipient:
+    raw_recipients, policy = get_effective_email_settings(session)
+    recipients = [r.strip() for r in raw_recipients.split(",") if r.strip()]
+    if not recipients:
         logger.debug("No alert recipient configured (ALERT_TO); skipping outbox enqueue.")
         return 0
 
     enqueued = 0
-    policy = cfg.email_notification_policy
 
     for event in events:
         advisory = session.query(Advisory).filter_by(id=event.advisory_id).first()
@@ -57,26 +87,27 @@ def enqueue_advisory_alerts(session: Session, events: List[AdvisoryEvent]) -> in
         if not should_notify_event(event, advisory, policy):
             continue
 
-        dedup_key = f"event:{event.id}:{recipient.strip().lower()}"
-        existing = session.query(EmailOutbox).filter_by(deduplication_key=dedup_key).first()
-        if existing:
-            continue
-
         subject, text_body, html_body = EmailService.build_advisory_email(event, advisory)
 
-        outbox_entry = EmailOutbox(
-            event_id=event.id,
-            recipient=recipient.strip(),
-            subject=subject,
-            body=text_body,
-            body_html=html_body,
-            status="PENDING",
-            attempts=0,
-            next_attempt_at=datetime.datetime.utcnow(),
-            deduplication_key=dedup_key
-        )
-        session.add(outbox_entry)
-        enqueued += 1
+        for recipient in recipients:
+            dedup_key = f"event:{event.id}:{recipient.lower()}"
+            existing = session.query(EmailOutbox).filter_by(deduplication_key=dedup_key).first()
+            if existing:
+                continue
+
+            outbox_entry = EmailOutbox(
+                event_id=event.id,
+                recipient=recipient,
+                subject=subject,
+                body=text_body,
+                body_html=html_body,
+                status="PENDING",
+                attempts=0,
+                next_attempt_at=datetime.datetime.utcnow(),
+                deduplication_key=dedup_key
+            )
+            session.add(outbox_entry)
+            enqueued += 1
 
     session.flush()
     if enqueued > 0:

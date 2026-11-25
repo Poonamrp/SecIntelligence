@@ -22,8 +22,9 @@ def render_alerts(session: Session):
 
     st.markdown("---")
 
-    col_btn, col_filter = st.columns([1, 2])
+    col_btn, col_filter, col_date = st.columns([1, 1, 1.5])
     with col_btn:
+        st.write("")
         if st.button("🔄 Retry Failed Now", use_container_width=True, type="primary"):
             failed_items = session.query(EmailOutbox).filter(EmailOutbox.status == "FAILED").all()
             for it in failed_items:
@@ -38,9 +39,36 @@ def render_alerts(session: Session):
     with col_filter:
         status_filter = st.selectbox("Filter Status", ["All", "PENDING", "SENT", "FAILED"])
 
+    with col_date:
+        date_filter = st.selectbox("Filter by Date", ["All Dates", "Today", "Last 7 Days", "Last 30 Days", "Custom Date"])
+
+    start_dt, end_dt = None, None
+    today = datetime.date.today()
+    if date_filter == "Today":
+        start_dt = datetime.datetime.combine(today, datetime.time.min)
+        end_dt = datetime.datetime.combine(today, datetime.time.max)
+    elif date_filter == "Last 7 Days":
+        start_dt = datetime.datetime.combine(today - datetime.timedelta(days=7), datetime.time.min)
+        end_dt = datetime.datetime.combine(today, datetime.time.max)
+    elif date_filter == "Last 30 Days":
+        start_dt = datetime.datetime.combine(today - datetime.timedelta(days=30), datetime.time.min)
+        end_dt = datetime.datetime.combine(today, datetime.time.max)
+    elif date_filter == "Custom Date":
+        c_d1, c_d2 = st.columns(2)
+        with c_d1:
+            d_from = st.date_input("From", value=today - datetime.timedelta(days=7), key="alert_d_from")
+            start_dt = datetime.datetime.combine(d_from, datetime.time.min)
+        with c_d2:
+            d_to = st.date_input("To", value=today, key="alert_d_to")
+            end_dt = datetime.datetime.combine(d_to, datetime.time.max)
+
     query = session.query(EmailOutbox)
     if status_filter != "All":
         query = query.filter(EmailOutbox.status == status_filter)
+    if start_dt is not None:
+        query = query.filter(EmailOutbox.created_at >= start_dt)
+    if end_dt is not None:
+        query = query.filter(EmailOutbox.created_at <= end_dt)
 
     items = query.order_by(EmailOutbox.created_at.desc()).limit(100).all()
 
